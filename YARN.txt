@@ -1,0 +1,187 @@
+YARN - Yet Another Resource Negotiator 
+it was introduced in hadoop 2.0 to improve the MR implementation 
+
+
+Mapreduce 1  there are two demons control the job execution flow 
+	a) Job tracker   ---  coordinates all the job run on the system by scheduling tasks to task tracker  
+	b) Task Tracker  ---   Tasktrackers run tasks and send progress reports to the jobtracker, 
+
+	Job Tracker  keeps a record of the overall progress of each job. If a task fails, the jobtracker can reschedule it on a different tasktracker
+	
+JobTracker is responsible for 
+		a) job Scheduling            ( Matching tasks with task tracker )
+		b) task process Monitoring  ( Keep track of tasks , restarting failed and slowed tasks )
+		c)  responsible for storing the job history for completed Jobs 
+In MR2.0 these jobtracker responsibilites are spitted in to two entities  1) Resource Manger 
+																		  2) Application Master 	
+																		  3) Timeline Server  which stores the application history  
+why we need 2.0 
+----------------
+
+	a) In MapReduce 1, each tasktracker is configured with a static allocation of fixed-size “slots,” In YARN, a node manager manages a pool of resources, rather than a fixed number
+	  of designated slots Limited Slots were avialble for map and Reduce which causes under utilization => map task will be running in the mapper slot 
+	  while the reduce task will be running in the reducer slot . So when map is running reducer slots are sitting ideal 
+	b) cant share the resources with the non MR clusters It is even possible for users to run different versions of MapReduce on the same
+	   YARN cluster, which makes the process of upgrading MapReduce more manageable. 
+	c) scalability - one JobTracker per cluster which has a limit of 4000 data nodes after that we have performance issue
+		
+MapReduce 1 		YARN
+Jobtracker 			Resource manager, application master, timeline server
+Tasktracker 		Node manager
+Slot 				Container
+
+
+YARN Provides API for requestiong and working with Clusters , but these API are not available for Users directly by user code . 
+Instead user wrie in high level api which were built on top of YARN 
+
+Main Components
+----------------
+
+a) Resource Manager   => 
+				One per the Cluster 
+				responsble for Monitoring and global resource scheduler
+b)   Node   Manager  =>
+				One for each datanode(slave node)
+				Communicates with the RM and it will launch the conatiners 
+c) Containers        = >
+				Created By RM based on the request 
+				it Allocates certain amount of Resources like 1 gb RAM CPU etc 
+				Application run in one or more Container 
+d) Application Master =>
+
+				One per the Application 
+				Runs inside the Container
+				REquests more containers to run the application tasks 
+				
+e) Yarn Child     ==>
+	
+				Responsible for Running the Map and Reduce task 
+				it will send the progess to the Application Master
+
+
+
+Anatomy of a MapReduce Job Run
+
+Job Submission     - 1) job gets submitted to Job Client , Job Client Fetch the Application Id from the Resource Manager 
+					 2)	it checks whether the Output Directory already exists or not if the dir is available it throws the error 
+					 3) it then verifies the input directory and it copies the resources to HDFS with high replication 
+					 4) then it finally submits the application to RM
+					
+Job Initialization -  1) RM's Scheduler pickup the Job from its Queue it contacts the Node manager to start a new Container to create a New Application Master for the Job 
+					  2) Application Master creates a Object and retrieves the Input Split from the HDFS 
+					  3) Application Master checks and Deceides how to run the MR job , 
+							a) if the Job is Small ( < 10 mappper and 1 reducer ) then it will consider the job as uber task and run the job in the same JVM itself . 
+							b) if the Job is large it will request the RM for Resources 
+Task Assignment    -   1) scheduler will understand where the input splits are located , it understands from the herat beat of the nodemanger and use this info to provide data locality while allocating resources 
+							it will allocate the node such that data locality is present if that cant be done it will allocate the node from the same RACK 
+							if it even failed on this it will allocate any random available node 
+							
+ Task Execution     -  1) Application Master contacts the node manager based on the info gathered from RM . Application Master contacts the nodemanger and create a Container 
+					   2) yarn child is launched . its just a java Program and run on the seperate JVM  
+					   3) Yarn Child retrives all the  job resources (Jars , configuration Files) from HDFS and run the MR job 
+
+
+
+Progress and Status Updates
+ Yarn child   will send its status to the Application Master on every 3 seconds 
+ Application Master aggregates  all the Status and sends it to the Client  
+ 
+ On the Job Completion Application Master and the Task (YarnChild) will clean up all the Data and free the resources for others 
+ 
+ 
+ Failures
+ -----------
+ Task Failure  
+ ==============
+ 
+=>	User code in the map or reduce trows some runtime exception 
+		- if this happens task JVM report the error back to the Application Master , Application master mark the task as Failure  and frees the container
+=> 	sudden exist of the Jvm 
+	    - application Master doesnt receive the progress update for a long time and marked it as failed .Timeout period is configurable and the default value is 10 
+
+=> Application master try to reschedulde the task , if the task fails for 4 times it wont be reschedulded. Application master retrigger the Task in some another nodemanager not in the failed One 
+			for some application 
+			
+			
+Application Master 
+=====================			
+if Application master failes for 2 times it will not be tried again and again this value is configurable yarn.resourcemanger.am.max-attempts 
+
+To recover the Application Master Failures As Follows:-
+
+	Application master sends the Periodic progress update to the resource manager and in the event of application master failure  resourcemanger wont get the heartbeat and it detect the failure and 
+	create a new instance of the Application Master will be started in the new container of the node manger 
+	for the  Mapreduce task  Application  master uses the job history server to recover all the job and also its state of teh jobs , so that they dont have to rerun 
+
+
+Node Mangaer Failure
+======================
+If a nodeMangaer  failed either by crashing/ running very slowly it will stop  sending the haeartbeat to RM 
+if Resource Manager doesnt receive any heartbeat from the Node mangaer after 10 Minutes it consider Nm as failure ( this time is configurable )
+
+Any task or application master running on the failed node manager will be recovered using the mechanisms described in the previous two sections. 
+
+ map tasks that were run and completed successfully on the failed node manager will be  rerun if they belong to incomplete jobs, since their intermediate output 
+ residing on the failed node manager’s local filesystem may not be accessible to the reduce task.
+ 
+Resource Mangaer Failure             - the resource manager is a single point of failure,  
+=========================
+	Failure of the resource manager is serious, because without it, neither jobs nor task containers can be launched. In the default configuration, 
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Spark ON YARN 
+================
+Running Spark on Yarn provides the tighest intergeration to the Hadoop Compenents. 
+spark offers two deployment modes for running on yarn 
+
+	a) yarn client mode   - spark-shell  ==> where driver runs in the client 
+	b) yarn driver mode   - spark submit ==>where driver runs on the Cluster in the yarn application master
+
+
+
+
+
+
+
+Here’s an example showing how to run spark-shell on YARN with four executors, each using one core and 2 GB of memory:
+% spark-shell --master yarn-client \
+ --num-executors 4 \
+ --executor-cores 1 \
+ --executor-memory 2g
+
+ 
+ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 
+ Schedulingg in Yarn 
+ -------------------
+ In real World resources are limited and on a busy cluster an application will often need to wait to have some of its requests fullfilled.
+ Three schedulers are available in YARN: 
+	>>the FIFO, 
+	>>Capacity,
+	>>Fair Schedulers
+ 
+ FIFO = First In First Out  
+ -----------------------------
+ 
+ as per the Image even a Small jib has to wait for the large job to complete based on the time of Submission 
+ 
+
+Capacity Scheduler
+----------------------
+
+	As seen in the Daigram a Seperate queue has been allocated for the Small Jobs so as soon as the Small job is sumbitted it will be pickde up , but it will come at the cost of overall cluster
+	utilization since the queue capacity is reserved for that small jobs (i.e) larger jobs will finishes kater than the fifo 
+	
+Fair Scheduler
+------------------
+	It will Dynamically Balance the resources between all running Jobs 
+	 Just after the first (large) job starts, it is the only job running, so it gets all the resources in the cluster. 
+	 When the second (small) job starts, it is allocated half of the cluster resources so that each job is using its fair share of resources.
+	 
+Note that there is a lag between the time the second job starts and when it receives its fair share, since it has to wait for resources to free up as containers used by the first job
+complete. After the small job completes and no longer requires resources, the large job goes back to using the full cluster capacity again. The overall effect is both high cluster
+utilization and timely small job completion
+
+Configuring Schedulers are out of Scope for Now 
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------
