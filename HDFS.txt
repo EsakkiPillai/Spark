@@ -21,7 +21,11 @@ HDFS Concepts
  Filesystem blocks are typically a few kilobytes in size. HDFS has 128MB Block size , 
  Also  a 1 MB file stored with a block size of 128 MB uses 1 MB of disk space, not 128 MB 
  HDFS blocks are large compared to disk blocks, and the reason is to minimize the cost of seeks
- 
+
+HDFS ARCHITECTURE
+-------------------
+
+		Refer the Image from github  
  
  An HDFS cluster has two types of nodes operating in a master−worker pattern: 		a namenode (the master) and a  		number of datanodes (workers). 
  
@@ -32,11 +36,66 @@ HDFS Concepts
 		
 		Data Node   -  Datanode are workhorse of the namenode They store and retrieve blocks when they are told to (namenode) they report back to the namenode periodically with the list of blocks that they are storing 
 		
-		Without the namenode the filesystem cant be accessed infact the data would be lost , all the files on the filesystem would be lost since there would be no way of knowing how to reconstruct the files from the blocks on the datanodes.
-		It is important to make the name node resilient to failures 
-				hdfs federation 
-				high availability 
-				failover and fencing 
+Without the namenode the filesystem cant be accessed infact the data would be lost , all the files on the filesystem would be lost since there would be no way of knowing how to reconstruct the files from the blocks on the datanodes.
+It is important to make the name node resilient to failures and it has the following Features
+
+1)	HDFS federation   -  Collection of NameNode 
+						How to Handle the increase in need to cluster  if we increase the data node the amount of ram required to store the meta data also increase 
+						so to provide scalability multiple namenode are required
+							each and every NM take care of all the datanode 
+							
+							Each and every datanode should connect to each and every namenode aall the 10 machine should connect to name node 1 and 2 
+2) 	High availability 
+			if we want to bring back the Namenode 
+						1) fsimage of primary NM in the memory of Secondaty NM
+						2) Editlog for all transaction we have to reply back 
+						3) we have to get the block report from the data node then only name node will leave from safemode
+	
+	Method 1 :- Shared Edit Log 
+	----------------------------
+					all the data node connected to all the Name node 
+					all the data node send the block report to both (active and passive ) NM in the Namespace , so both the NM has the same block mapping at nay time 
+					Both the Active and passive namenode share the edit log with the high available shared Storage .
+					
+			When the Active Name Node Failed , passive Namenode should be up and Running , since it has all the Fs image and Edit logs are in common we can easily switch to the Passive namenode 
+			how the switch over happens ?   how we identify the name node is Down ? 
+			Failover 
+			---------
+				Its impossible for the system to know whether Active namenode down . 
+				Active Namenode is not Responding for a longtime (10 sec) it assumes the Namenode is dead and then the stanby (passive) name node use this oppurtunity to become the active NM and all the clients are communicated to the PAssive Namenode 
+				if the Actual NM is not Down due to the Network Failure , 
+			Fencing
+			--------
+				it might actually thought it was up and running so its a disaster then hadoop will do the Fencing process comes to play 
+					it will kill the namenode process which was marjed as dead 
+					it try to remove the access for the shared edit logs 
+					it will do the STONITH = Shot The Other NOde In The Head => it will kill the signal which will kill the Power signal to the other namenode 
+		IF both the Name node (Active and Passive) node goes down then our old friend secondary name node comes into Play  , but we have to all the process manually 			
+		
+	note:-
+		with in a namespace we are having two namenodes which were active and passive namenode 
+		NameSpace = list of all the Files managed by the nameNode 
+		NameNode  = its a physical Machine 
+		lets say if we want 4NM its like we have 8 NM so that we can contribute 16000 Nodes  4 Nodes = 2 name spaces 
+		
+	Method 2: - QJM 
+    -----------------------		
+	   By Default there are 3 Journal Node in the Cluster , they try to keep active and Passive name node in Sync Together. For CDH Journal Node will not start because it has 3 different machine 
+	   when ever the FIle Operation happen ( File creation deletion append ) then active namenode which will always write about the operation in Majority of the Journal Node . Here we have 3 Journal Nodes so acrive namenode should write atleast 2 NM 
+	   passive NM can capable of reading these edit logs from all of the JOurnal Nodes all together . Standby NM keep watching if there is any change in the edit log and if the change is in the majority of the journal Node ..if Yes  it will immediately apply the change to its own edit logs 
+	   so over a time both NM has same edit logs .
+	   
+	   If  failure  happens :- 
+		trigger point => 	1) edit log entry is available in one journal Node and other journal node doesnt have for a long time which means actual NM is down this i sthe trigger point StandBy NameNode to become active 
+		Become active =>	2) what ever available editlog in the Majority journal Node will be applied , since its continously watching failover will be very quick . and it will active then the Failover and Fenching Process will happen like Method1 
+		
+		journal nodes are light weight processes so they can coupled with any hadoop deamons like resource Manger . 
+		
+		Its a Thumb rule to always go for odd Number like 5 7 9 11 					
+			
+	   
+				
+
 		
 			
 BLOCK CACHING 
@@ -44,10 +103,7 @@ BLOCK CACHING
 	Normally a datanode reads blocks from disk, but for frequently accessed files the blocks may be explicitly cached in the datanode’s memory, in an off-heap block cache. 
 	
 	
-HDFS ARCHITECTURE
--------------------
 
-		
 		
 HDFS READ AND WRITE OPERATION 
 ------------------------------
@@ -157,6 +213,10 @@ conf.addResource(hdfsHdfsSitePath)
 val filesytsem = new FileSystem.get(conf)                     // Now New Filesystem has been created with the Proper configuration Files 
 
 
+
+val fs = FileSystem.get(sc.hadoopConfiguration)   // For Spark Configuration we can access all the method using this one it works well 
+
+
 // To delete the File 
 def removeFile(filename:String) = {
 	val path = new path(filename)
@@ -185,3 +245,6 @@ def open(fileName:String) = {
 
 
 }
+
+
+verify the Excel 
