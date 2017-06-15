@@ -1,0 +1,679 @@
+SQOOP - CCA 175 
+---------------
+
+To identify the host and the POrt name in the cluster 
+----------------------------------------------------------
+login to the Mysql and issue the below Query 
+
+mysql> show variables where variable_name in ('PORT' ,'HOSTNAME');
++---------------+--------------------+
+| Variable_name | Value              |
++---------------+--------------------+
+| hostname      | nn01.itversity.com |
+| port          | 3306               |
++---------------+--------------------+
+2 rows in set (0.00 sec)
+--------------------------------------------------------------------------------------------------------
+To list the Databases 
+
+[esakkipillai@gw01 ~]$ sqoop list-databases \
+> --connect "jdbc:mysql://nn01.itversity.com:3306" \
+> --username retail_dba \
+> --password itversity 
+
+we can use the -P flag instead of the --password flag which is shown as Follows 
+
+
+using the -P flag 
+sqoop list-databases \
+--connect "jdbc:mysql://nn01.itversity.com:3306" \
+--username retail_dba \
+-P
+
+
+A Simple Import  - Make Sure the Directory Doesnt Exists in HDFS 
+
+sqoop import \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_db" --username retail_dba --password itversity \
+--table departments \
+--target-dir /user/esakkipillai/sqooppract/retail_db/departments
+
+
+
+Output 
+[esakkipillai@gw01 ~]$ hdfs dfs -ls /user/esakkipillai/sqooppract/retail_db/departments
+Found 5 items
+-rw-r--r--   3 esakkipillai hdfs          0 2017-06-13 09:19 /user/esakkipillai/sqooppract/retail_db/departments/_SUCCESS
+-rw-r--r--   3 esakkipillai hdfs         21 2017-06-13 09:19 /user/esakkipillai/sqooppract/retail_db/departments/part-m-00000
+-rw-r--r--   3 esakkipillai hdfs         10 2017-06-13 09:19 /user/esakkipillai/sqooppract/retail_db/departments/part-m-00001
+-rw-r--r--   3 esakkipillai hdfs          7 2017-06-13 09:19 /user/esakkipillai/sqooppract/retail_db/departments/part-m-00002
+-rw-r--r--   3 esakkipillai hdfs         22 2017-06-13 09:19 /user/esakkipillai/sqooppract/retail_db/departments/part-m-00003
+
+As u can see we didnt specify Any Mapper so by default 4 mapper will be selected 
+
+
+Command Output/Logs as Follows 
+
+Please set $ACCUMULO_HOME to the root of your Accumulo installation.
+17/06/13 09:19:17 INFO sqoop.Sqoop: Running Sqoop version: 1.4.6.2.5.0.0-1245
+17/06/13 09:19:17 WARN tool.BaseSqoopTool: Setting your password on the command-line is insecure. Consider using -P instead.
+Note: /tmp/sqoop-esakkipillai/compile/e3fbb1221de488ac24908f4423d5b0ca/departments.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+17/06/13 09:19:19 INFO orm.CompilationManager: Writing jar file: /tmp/sqoop-esakkipillai/compile/e3fbb1221de488ac24908f4423d5b0ca/departments.jar
+17/06/13 09:19:19 WARN manager.MySQLManager: It looks like you are importing from mysql.
+
+17/06/13 09:19:19 INFO mapreduce.ImportJobBase: Beginning import of departments
+17/06/13 09:19:20 INFO impl.TimelineClientImpl: Timeline service address: http://rm01.itversity.com:8188/ws/v1/timeline/
+17/06/13 09:19:20 INFO client.RMProxy: Connecting to ResourceManager at rm01.itversity.com/172.16.1.106:8050
+17/06/13 09:19:21 INFO client.AHSProxy: Connecting to Application History server at rm01.itversity.com/172.16.1.106:10200
+17/06/13 09:19:27 INFO db.DBInputFormat: Using read commited transaction isolation
+17/06/13 09:19:27 INFO db.DataDrivenDBInputFormat: BoundingValsQuery: SELECT MIN(`department_id`), MAX(`department_id`) FROM `departments`
+17/06/13 09:19:27 INFO db.IntegerSplitter: Split size: 1; Num splits: 4 from: 2 to: 7
+17/06/13 09:19:27 INFO mapreduce.JobSubmitter: number of splits:4
+17/06/13 09:19:28 INFO mapreduce.Job: The url to track the job: http://rm01.itversity.com:8088/proxy/application_1495691438758_10767/
+17/06/13 09:19:28 INFO mapreduce.Job: Running job: job_1495691438758_10767
+17/06/13 09:19:34 INFO mapreduce.Job: Job job_1495691438758_10767 running in uber mode : false
+17/06/13 09:19:34 INFO mapreduce.Job:  map 0% reduce 0%
+17/06/13 09:19:40 INFO mapreduce.Job:  map 100% reduce 0%
+17/06/13 09:19:41 INFO mapreduce.Job: Job job_1495691438758_10767 completed successfully
+17/06/13 09:19:41 INFO mapreduce.Job: Counters: 30
+ File System Counters
+                FILE: Number of bytes read=0
+                FILE: Number of bytes written=641344
+                FILE: Number of read operations=0
+                FILE: Number of large read operations=0
+                FILE: Number of write operations=0
+                HDFS: Number of bytes read=481
+                HDFS: Number of bytes written=60
+                HDFS: Number of read operations=16
+                HDFS: Number of large read operations=0
+                HDFS: Number of write operations=8
+        Job Counters 
+                Launched map tasks=4
+                Other local map tasks=4
+                Total time spent by all maps in occupied slots (ms)=25686
+                Total time spent by all reduces in occupied slots (ms)=0
+                Total time spent by all map tasks (ms)=12843
+                Total vcore-milliseconds taken by all map tasks=12843
+                Total megabyte-milliseconds taken by all map tasks=19726848
+        Map-Reduce Framework
+                Map input records=6
+                Map output records=6
+                Input split bytes=481
+                Spilled Records=0
+                Failed Shuffles=0
+                Merged Map outputs=0
+                GC time elapsed (ms)=186
+                CPU time spent (ms)=4720
+                Physical memory (bytes) snapshot=951873536
+                Virtual memory (bytes) snapshot=13079797760
+                Total committed heap usage (bytes)=805306368
+        File Input Format Counters 
+                Bytes Read=0
+        File Output Format Counters 
+                Bytes Written=60
+17/06/13 09:19:41 INFO mapreduce.ImportJobBase: Transferred 60 bytes in 21.6174 seconds (2.7755 bytes/sec)
+17/06/13 09:19:42 INFO mapreduce.ImportJobBase: Retrieved 6 records.
+
+
+Again a Simple Import Table by using Different Mapper (2) 
+
+sqoop import \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_db" --username retail_dba --password itversity \
+--table departments \
+--target-dir /user/esakkipillai/sqooppract/retail_db_Exp/departments_changeMapper \
+--num-mappers 3 ;
+
+
+Exception :- If the Directory Already Exists n01.itversity.com:8020/user/esakkipillai/sqooppract/retail_db/departments already exist
+
+
+Problem 03 :- 
+---------------
+Execute a Command Directly in Mysql Directly from SQoop 
+
+sqoop eval  \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_db"  --username retail_dba --password itversity \
+-e "select * from departments LIMIT 10" 
+
+sqoop eval \
+--connect "jdbc"mysql://nn01.itversity.com:3306/retail_import" --username retail_dba --password itversity \
+--query " insert into departments values (200,'DEVOPS') " ;
+
+
+
+Problem 04:- it will work with the Warehouse Directory only target Directory wont be Working 
+
+Import all the Tables from the retail_db 
+
+
+sqoop import-all-tables \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_db" --username retail_dba --password itversity \
+--warehouse-dir /user/hive/warehouse/esakSqoop/retail_db \
+--num-mappers 7 ;
+
+Problem 05 :- 
+3) Import A Table Using Where Condition 
+
+sqoop import \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity \
+--table departments \
+--where 'department_id  <10 ' \
+--target-dir /user/esakkipillai/retail_db/importcases/pb05 ;
+
+import all the rows but specified Columns 
+sqoop import \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity \
+--table order_items \
+--columns "order_item_id,order_item_subtotal"   \
+--target-dir /user/esakkipillai/retail_db/importcases/pb05a 
+-m 1;
+
+
+problem 06 : - 
+
+Import with a free form query without where clause
+
+sqoop import \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity \
+--query 'select order_item_id , order_item_product_id ,order_item_subtotal  from order_items where $CONDITIONS'  --split-by order_item_id \ 
+--target-dir /user/esakkipillai/retail_db/importcases/pb06 ;
+
+ Import with a free form query with where clause
+ 
+ sqoop import \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity \
+--query 'select order_item_id , order_item_product_id ,order_item_subtotal  from order_items where order_item_subtotal < 100 AND $CONDITIONS'  --split-by order_item_id  \ 
+--target-dir /user/esakkipillai/retail_db/importcases/pb06a ;
+
+
+Problem 07 :- 
+
+Enable The Compression 
+
+ sqoop import \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity \
+--table order_items  \
+--compress   \
+--compression-codec  org.apache.hadoop.io.compress.SnappyCodec  \
+--num-mappers 2   \
+--split-by order_item_id   \
+--target-dir /user/esakkipillai/retail_db/importcases/pb07  ;
+
+
+output
+-----
+
+[esakkipillai@gw01 ~]$ hdfs dfs -ls /user/esakkipillai/retail_db/importcases/pb07
+Found 3 items
+-rw-r--r--   3 esakkipillai hdfs          0 2017-06-13 10:27 /user/esakkipillai/retail_db/importcases/pb07/_SUCCESS
+-rw-r--r--   3 esakkipillai hdfs     924230 2017-06-13 10:27 /user/esakkipillai/retail_db/importcases/pb07/part-m-00000.snappy
+-rw-r--r--   3 esakkipillai hdfs     916277 2017-06-13 10:27 /user/esakkipillai/retail_db/importcases/pb07/part-m-00001.snappy
+
+
+while the job is running 
+[esakkipillai@gw01 ~]$ hdfs dfs -ls /user/esakkipillai/retail_db/importcases/pb07
+Found 1 items
+drwxr-xr-x   - esakkipillai hdfs          0 2017-06-13 10:27 /user/esakkipillai/retail_db/importcases/pb07/_temporary
+[esakkipillai@gw01 ~]$ 
+
+
+Problem 08 :-     
+--------------
+
+ Incremental imports
+ 
+ Normal Import :- 
+ 
+sqoop import \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity \
+--table departments  \
+--num-mappers 2   \
+--target-dir /user/esakkipillai/retail_db/importcases/pb08  ;
+ 
+ 
+ in MYSQL 
+ mysql> insert into departments value (200 ,'DEVOPS');
+Query OK, 1 row affected (0.04 sec)
+
+mysql> update departments set department_name = 'WWE' where department_id =5 ;
+Query OK, 1 row affected (0.06 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+
+sqoop import \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity \
+--table departments  \
+--num-mappers 2   \
+--check-column department_id  \
+--incremental append  \
+--last-value 24 \
+--target-dir /user/esakkipillai/retail_db/importcases/pb08  ;
+
+
+[esakkipillai@gw01 ~]$ hdfs dfs -cat /user/esakkipillai/retail_db/importcases/pb08/part-m*
+2,Development
+3,Footwear
+4,udpated
+5,Golf
+6,Outdoors
+7,Fan Shop
+8,Test value 8
+9,Test value 9
+10,Val,ue
+23,test
+24,test"
+266,test56
+344,newvalue
+200,DEVOPS
+266,test56
+344,newvalue
+
+
+it will check for the last updated value based on the column we have mention 
+
+mysql> insert into departments values (345, 'Hadooperek')
+    -> ;
+Query OK, 1 row affected (0.09 sec)
+
+
+Use --incremental lastmodified, and you need to add an extra column to your MySql table with a time-stamp, and whenever you update a row in MySql you need to update the time-stamp column as well.
+
+ALTER TABLE departments ADD ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+UPDATE TABLE departments SET ts=now();
+
++---------------+-----------------+---------------------+
+| department_id | department_name | ts                  |
++---------------+-----------------+---------------------+
+|             2 | Development     | 2017-06-13 10:53:09 |
+|             3 | Footwear        | 2017-06-13 10:53:09 |
+|             4 | udpated         | 2017-06-13 10:53:09 |
+|             5 | WWE             | 2017-06-13 10:53:09
+
+
+
+ (Specify Mergekey id )
+ 
+sqoop import \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity \
+--table departments  \
+--num-mappers 2   \
+--check-column ts  \
+--incremental lastmodified  \
+--merge-key ts   \
+--target-dir /user/esakkipillai/retail_db/importcases/pb08a  ;
+
+
+[esakkipillai@gw01 ~]$ hdfs dfs -cat /user/esakkipillai/retail_db/importcases/pb08a/pa*
+2,Development,2017-06-13 10:53:09.0
+3,Footwear,2017-06-13 10:53:09.0
+4,udpated,2017-06-13 10:53:09.0
+5,WWE,2017-06-13 10:53:09.0
+6,Outdoors,2017-06-13 10:53:09.0
+7,Fan Shop,2017-06-13 10:53:09.0
+8,Test value 8,2017-06-13 10:53:09.0
+9,Test value 9,2017-06-13 10:53:09.0
+10,Val,ue,2017-06-13 10:53:09.0
+23,test,2017-06-13 10:53:09.0
+24,test",2017-06-13 10:53:09.0
+200,DEVOPS,2017-06-13 10:53:09.0
+266,test56,2017-06-13 10:53:09.0
+344,newvalue,2017-06-13 10:53:09.0
+345,Hadooperek,2017-06-13 10:53:09.0
+
+we have made 1 update and 1 insert 
+mysql> insert into departments (department_id , department_name) values (346, 'Hadooperek1')
+    -> ;
+Query OK, 1 row affected (0.07 sec)
+
+mysql> update departments set department_name = 'TNA' where department_id = 5
+    -> ;
+Query OK, 1 row affected (0.04 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+sqoop import \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity \
+--table departments  \
+--num-mappers 2   \
+--check-column ts  \
+--incremental lastmodified  \
+--merge-key ts   \
+--last-value 2017-06-13 10:59:19.0 \
+--target-dir /user/esakkipillai/retail_db/importcases/pb08a  ;
+
+
+
+
+Problem 09 :-
+--------------
+
+
+Import Table using  Fields terminated by # enclosed by " lines termminated by  , stored as avro file 
+
+
+sqoop import \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity \
+--table departments  \
+--enclosed-by  '\"'  \
+--fields-terminated-by ' \# '    \
+--lines-terminated-by ', ' \
+--target-dir /user/esakkipillai/retail_db/importcases/pb09   \
+--as-avrodatafile ;
+
+Noe : Dont Give Spaces In between Them 
+
+sqoop import \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity \
+--table departments  \
+--enclosed-by  '\"'  \
+--fields-terminated-by '^^'    \
+--lines-terminated-by '$' \
+--target-dir /user/esakkipillai/retail_db/importcases/pb09b ;
+
+[esakkipillai@gw01 ~]$ hdfs dfs -cat /user/esakkipillai/retail_db/importcases/pb09a/*
+"2","Development","2017-06-13 10:53:09.0"*"3","Footwear","2017-06-13 10:53:09.0"*"4","udpated","2017-06-13 10:53:09.0"*"5","TNA","2017-06-13 10:58:30.0"*"6","Outdoors","2017-06-13 10:53:09.0"*"7","Fan Shop","2017-06-13 10:53:09.0"*"8","Test value 8","2017-06-13 10:53:09.0"*"9","Test value 9","2017-06-13 10:53:09.0"*"10","Val,ue","2017-06-13 10:53:09.0"*"23","test","2017-06-13 10:53:09.0"*"24","test"","2017-06-13 10:53:09.0"*"200","DEVOPS","2017-06-13 10:53:09.0"*"266","test56","2017-06-13 10:53:09.0"*"344","newvalue","2017-06-13 10:53:09.0"*"345","Hadooperek","2017-06-13 10:53:09.0"*"346","Hadooperek1","2017-06-13 10:57:49.0"*[esakkipillai@gw01 ~]$ 
+
+
+[esakkipillai@gw01 ~]$ hdfs dfs -cat /user/esakkipillai/retail_db/importcases/pb09a/*
+"2" "Development" "2017-06-13 10:53:09.0","3" "Footwear" "2017-06-13 10:53:09.0","4" "udpated" "2017-06-13 10:53:09.0","5" "TNA" "2017-06-13 10:58:30.0","6" "Outdoors" "2017-06-13 10:53:09.0","7" "Fan Shop" "2017-06-13 10:53:09.0","8" "Test value 8" "2017-06-13 10:53:09.0","9" "Test value 9" "2017-06-13 10:53:09.0","10" "Val,ue" "2017-06-13 10:53:09.0","23" "test" "2017-06-13 10:53:09.0","24" "test"" "2017-06-13 10:53:09.0","200" "DEVOPS" "2017-06-13 10:53:09.0","266" "test56" "2017-06-13 10:53:09.0","344" "newvalue" "2017-06-13 10:53:09.0","345" "Hadooperek" "2017-06-13 10:53:09.0","346" "Hadooperek1" "2017-06-13 10:57:49.0",[esakkipillai@gw01 ~]$ 
+
+
+Argument	Description
+--enclosed-by <char>	Sets a required field enclosing character
+--escaped-by <char>	Sets the escape character
+--fields-terminated-by <char>	Sets the field separator character
+--lines-terminated-by <char>	Sets the end-of-line character
+--mysql-delimiters	Uses MySQL’s default delimiter set: fields: , lines: \n escaped-by: \ optionally-enclosed-by: '
+--optionally-enclosed-by <char>	Sets a field enclosing character
+
+Import control arguments:
+   --as-avrodatafile             Imports data to Avro Data Files
+   --as-sequencefile             Imports data to SequenceFiles
+   --as-textfile                 Imports data as plain text (default)
+   --as-parquetfile              Imports data to Parquet Data Files
+   
+   
+   
+Pb 10 :- 
+
+Store the File in Parquet File Format    
+
+
+
+sqoop import \
+--connect jdbc:mysql://nn01.itversity.com:3306/retail_export --username retail_dba --password itversity  \
+--table departments \
+--target-dir /user/esakkipillai/retail_db/importcases/pb10  \
+--as-parquetfile    ;
+   
+   
+ 
+Pbm 11:- Normal Import from a Table to HIVE 
+
+sqoop import   \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity  \
+--table departmentsesak   \
+-m 5  \
+--hive-import   \
+--create-hive-table   \
+--hive-table departmentsesak   \
+--target-dir /user/esakkipillai/retail_db/importcases/pb11   ; 
+
+import the table into Hive sqoopEsak Database 
+ sqoop import   \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity  \
+--table departmentsesak   \
+-m 5  \
+--hive-import   \
+--create-hive-table   \
+--hive-table sqoopesak.departmentsesak   \
+--target-dir /user/esakkipillai/retail_db/importcases/pb11a   ; 
+
+import the table into Hive sqoopEsak Database 
+
+ sqoop import   \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity  \
+--table departmentsesak   \
+-m 5  \
+--hive-import   \
+--create-hive-table   \
+--hive-table sqoopesak.departmentsesakformat   \
+--enclosed-by '^'  \
+--fields-terminated-by '$' \
+--target-dir /user/esakkipillai/retail_db/importcases/pb11abc   ; 
+   
+   
+pbm 12 :- Overwrite the Table Data from Mysql into Hive 
+
+
+ sqoop import   \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity  \
+--table departmentsesak   \
+-m 3  \
+--hive-import   \
+--hive-overwrite  \
+--hive-table  sqoopesak.departmentsesaknew  \
+--enclosed-by '\"' \
+--fields-terminated-by ','  \
+--target-dir /user/esakkipillai/retail_db/importcases/pb12c ;
+
+
+
+
+Pbm 13:- Hive import using Partitioning 
+
+sqoop import   \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export"  --username retail_dba --password itversity \
+-m 1   \
+--query 'select category_id  , category_name       from categories_exp where category_department_id =5 AND $CONDITIONS'   \
+--hive-import  \
+--create-hive-table    \
+--hive-table sqoopesak.categorieshive \
+--hive-partition-key category_department_id   \
+ --hive-partition-value 5 \
+--target-dir /user/esakkipillai/retail_db/importcases/pb13/   ;
+
+
+
+sqoop import   \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export"  --username retail_dba --password itversity \
+-m 1   \
+--query 'select category_id  , category_name       from categories_exp where category_department_id =7 AND $CONDITIONS'   \
+--hive-import  \
+--hive-overwrite   \
+--hive-table sqoopesak.categorieshive \
+--hive-partition-key category_department_id   \
+ --hive-partition-value 7 \
+--target-dir /user/esakkipillai/retail_db/importcases/pb13/   ;
+
+
+sqoop import   \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export"  --username retail_dba --password itversity \
+-m 1   \
+--query 'select category_id  , category_name       from categories_exp where category_department_id =2 AND $CONDITIONS'   \
+--hive-import  \
+--hive-overwrite   \
+--hive-table sqoopesak.categorieshive \
+--hive-partition-key category_department_id   \
+ --hive-partition-value 2 \
+--target-dir /user/esakkipillai/retail_db/importcases/pb13/   ;
+
+
+
+--hive-partition-value 8 \
+--hive-partition-value 3 \
+--hive-partition-value 4 \
+--hive-partition-value 6 \
+--hive-partition-value 2 \
+ 
+  --enclosed-by '\"' \
+--fields-terminated-by , \
+--escaped-by \\ \
+ 
+ 
+ pbm14 :-  Exporting out of HDFS into mysql
+ 
+ 
+ 
+ sqoop import \
+ --connect "jdbc:mysql://nn01.itversity.com:3306/retail_export"  --username retail_dba --password itversity \
+ --table categories_exp  \
+ -m 1  \
+ --target-dir /user/esakkipillai/retail_db/exportcases/pb01  ;
+ 
+ 
+ 
+ 1a - Basic Export 
+ 
+ sqoop export   \
+ --connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity \
+ --table departmentsesak_export  \
+ --staging-table departmentsesak_stg \
+ --clear-staging-table  \
+ -m 1 \
+ --export-dir /user/esakkipillai/retail_db/exportcases/pb01   ;
+ 
+ 
+1b ) Export without the Staging Table 
+
+ sqoop export   \
+ --connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity \
+ --table departmentsesak_exportint  \
+ -m 3 \
+ --export-dir /user/esakkipillai/retail_db/exportcases/pb01   ; 
+ 
+ 
+ 
+ pbm 2  Export in Update mode 
+ 
+sqoop import \
+ --connect "jdbc:mysql://nn01.itversity.com:3306/retail_export"  --username retail_dba --password itversity \
+ --table departmentsesakexport  \
+ --target-dir /user/esakkipillai/retail_db/exportcases/pb022  ;
+ 
+ 
+ 
+ 
+ sqoop export   \
+ --connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity \
+ --table departmentsesakexport  \
+ -m 3 \
+ --export-dir /user/esakkipillai/retail_db/exportcases/pb02   ; 
+ 
+ 
+ 
+ -- Update Only 
+ 
+ sqoop export   \
+ --connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity \
+ --m 2  \
+ --table departmentsesak   \
+ --update-key ID \
+ --update-mode updateonly  \
+ --export-dir /user/esakkipillai/retail_db/exportcases/pb022   ;
+ 
+ 
+ sqoop export   \
+ --connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity \
+ --m 2  \
+ --table departmentsesak   \
+ --update-key ID \
+ --update-mode allowinsert  \
+ --export-dir /user/esakkipillai/retail_db/exportcases/pb022   ; 
+ 
+ 
+ 
+ 
+ pbm 3  Export to HIVE
+ 
+ 
+ Normal Import 
+ 
+ 
+ sqoop import   \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity  \
+--table departmentsesakexport   \
+-m 5  \
+--hive-import   \
+--create-hive-table   \
+--hive-table sqoopesak.departmentsesakhive   \
+--target-dir /user/esakkipillai/retail_db/exportcases/pb03   ; 
+
+
+sqoop export \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity  \
+--table departmentsesak   \
+-m 3  \
+--update-key ID \
+--update-mode allowinsert  \
+--input-fields-terminated-by '\001'  \
+--export-dir hdfs://nn01.itversity.com:8020/apps/hive/warehouse/sqoopesak.db/departmentsesakhive  ;
+
+
+
+sqoop eval \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity  \
+--query "INSERT into departmentsesakexport values (13,'d020' ,'ROH')"
+
+
+-------------------------------------------------------------------------------------------
+sqoop job --create  simpleimport \
+-- import  \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity  \
+--table departmentsesak  \
+--target-dir /user/esakkipillai/retail_db/jobs/j0002 ;
+
+
+sqoop job --list
+sqoop job --show  <jobName>
+sqoop job --exec    <jobName>
+
+
+----------------------------------------------------
+append mode 
+----------------------------------------------------
+sqoop merge Command 
+
+	1) Create the Merge Hdfs Directory
+	2) initial Load of department Table 
+	3) update the department and insert the data in departments 
+	4) New Load incremental Load   department_delta 
+	5) execute the Merge Command 
+	6) Delete Old Directory for user conv
+
+hdfs dfs -mkdir /user/esakkipillai/retail_db/merge
+
+sqoop import  \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity  \
+--table departmentsesak  \
+--target-dir /user/esakkipillai/retail_db/merge/departmentsesak1 ;
+
+
+
+sqoop import  \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity  \
+--query 'select * from departmentsesak where ID  > 12 AND $CONDITIONS ' \
+--split-by ID \
+--target-dir /user/esakkipillai/retail_db/merge/departmentsesak_delta ;
+
+sqoop merge --merge-key ID \
+--new-data  / user/esakkipillai/retail_db/merge/departmentsesak_delta \
+--onto  /user/esakkipillai/retail_db/merge/departmentsesak    \
+--target-dir /user/esakkipillai/retail_db/merge/departmentsesak_Stage  \
+--class-name departmentsesak  \
+--jar-file /tmp/sqoop-esakkipillai/compile/d52d882d234a05d3e8f7a11367adec4a/departmentsesak.jar ;
+
+QueryResult.jar
+
+
+
+sqoop import  \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity  \
+--table departmentsesak  \
+--target-dir /user/esakkipillai/retail_db/merge/departmentsesak1 \
+
+sqoop import  \
+--connect "jdbc:mysql://nn01.itversity.com:3306/retail_export" --username retail_dba --password itversity  \
+--table departmentsesak  \
+--append  \
+--target-dir /user/esakkipillai/retail_db/merge/departmentsesak1 \
